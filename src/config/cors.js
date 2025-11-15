@@ -5,6 +5,7 @@ const allowedOrigins = [
 
 export const corsConfiguration = {
   origin: (origin, callback) => {
+    // Permite requisições sem origem (como Postman) e as origens permitidas
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
