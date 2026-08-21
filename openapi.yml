@@ -4,8 +4,8 @@ info:
   version: 2.0.0
   description: API para gerenciamento de usuários, cursos e matrículas
 servers:
-  - url: http://localhost:3000
-    description: Servidor local
+  - url: /
+    description: Servidor atual
 tags:
   - name: Auth
   - name: Users
@@ -15,6 +15,14 @@ security:
   - bearerAuth: []
 
 paths:
+  /health:
+    get:
+      summary: Verifica se a API está funcionando
+      security: []
+      responses:
+        "200":
+          description: API funcionando
+
   /login:
     post:
       tags: [Auth]
