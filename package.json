@@ -6,8 +6,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "test": "vitest --watch",
-    "coverage": "vitest run --watch --coverage"
+    "create-admin": "node scripts/createAdmin.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",

@@ -1,8 +1,18 @@
 import User from "../models/userModel.js";
 import authenticateUser from "../services/authService.js";
+import validateEmail from "../services/validateEmail.js";
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+
+  // Valida os dados antes de autenticar
+  if (!email || !password) {
+    return res.status(400).json({ message: "E-mail e senha são obrigatórios" });
+  }
+
+  if (!validateEmail(email)) {
+    return res.status(400).json({ message: "Formato de e-mail inválido" });
+  }
 
   try {
     const token = await authenticateUser(email, password);
@@ -18,6 +28,7 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       };
 
       return res.status(200).send({ token, ...usersWithoutPassword });

@@ -1,364 +1,557 @@
 openapi: 3.0.0
 info:
   title: API Faculdade
-  version: 1.0.0
-  description: Documentação da API com Swagger
+  version: 2.0.0
+  description: API para gerenciamento de usuários, cursos e matrículas
 servers:
   - url: http://localhost:3000
-    description: Servidor Local
+    description: Servidor local
 tags:
-  - name: Users
-    description: Operações relacionadas a usuários
   - name: Auth
-    description: Operação de autenticação
+  - name: Users
+  - name: Courses
+  - name: Enrollments
 security:
   - bearerAuth: []
+
 paths:
-  /users:
-    get:
-      tags:
-        - Users
-      summary: Retorna a lista de usuários
+  /login:
+    post:
+      tags: [Auth]
+      summary: Autentica um usuário
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Lista de usuários retornada com sucesso
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Lista todos os usuários
+      description: Disponível somente para administradores.
+      responses:
+        "200":
+          description: Lista de usuários
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/UserResponse"
-        "500":
-          description: Erro interno do servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
+                  $ref: "#/components/schemas/User"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
-      tags:
-        - Users
-      summary: Cria um novo usuário
+      tags: [Users]
+      summary: Cria um usuário
+      description: Disponível somente para administradores.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserRequest"
+              $ref: "#/components/schemas/CreateUserRequest"
       responses:
         "201":
-          description: Usuário criado com sucesso
+          description: Usuário criado
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserResponse"
+                $ref: "#/components/schemas/User"
         "400":
-          description: Dados inválidos
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Dados inválidos"
-        "500":
-          description: Erro interno do servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
-  /users/{id}:
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/me:
     get:
-      tags:
-        - Users
-      summary: Retorna um usuário pelo ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: O ID do usuário a ser retornado
+      tags: [Users]
+      summary: Consulta a própria conta
       responses:
         "200":
-          description: Usuário retornado com sucesso
+          description: Dados do usuário autenticado
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserResponse"
+                $ref: "#/components/schemas/User"
         "404":
-          description: Usuário não encontrado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Usuário não encontrado"
-        "500":
-          description: Erro interno do servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
-    put:
-      tags:
-        - Users
-      summary: Atualiza todos os dados de um usuário pelo ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: O ID do usuário a ser atualizado
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserRequest"
-      responses:
-        "200":
-          description: Usuário atualizado com sucesso
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserResponse"
-        "400":
-          description: Dados inválidos
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Dados inválidos"
-        "404":
-          description: Usuário não encontrado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Usuário não encontrado"
-        "500":
-          description: Erro interno do servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
+          $ref: "#/components/responses/NotFound"
     patch:
-      tags:
-        - Users
-      summary: Atualiza parcialmente um usuário pelo ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: O ID do usuário a ser atualizado
+      tags: [Users]
+      summary: Atualiza a própria conta
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserRequest"
+              $ref: "#/components/schemas/UpdateUserRequest"
       responses:
         "200":
-          description: Usuário atualizado com sucesso
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserResponse"
+          description: Usuário atualizado
         "400":
-          description: Dados inválidos
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Dados inválidos"
-        "404":
-          description: Usuário não encontrado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Usuário não encontrado"
-        "500":
-          description: Erro interno do servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
+          $ref: "#/components/responses/BadRequest"
     delete:
-      tags:
-        - Users
-      summary: Remove um usuário pelo ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: O ID do usuário a ser removido
-      responses:
-        "204":
-          description: Usuário removido com sucesso
-        "404":
-          description: Usuário não encontrado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Usuário não encontrado"
-        "500":
-          description: Erro interno do servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
-  /login:
-    post:
-      tags:
-        - Auth
-      summary: Autentica um usuário e retorna um token JWT
-      security: [] # Desabilita a autenticação para este endpoint
+      tags: [Users]
+      summary: Exclui a própria conta
+      description: Exige a senha atual. O último administrador não pode ser excluído.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required: [password]
               properties:
-                email:
-                  type: string
-                  description: O email do usuário.
                 password:
                   type: string
-                  description: A senha do usuário.
-              required:
-                - email
-                - password
-              example:
-                email: joao.silva@email.com
-                password: senha123
+                  example: senha123
       responses:
-        200:
-          description: Autenticação bem-sucedida
+        "204":
+          description: Conta excluída
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Users]
+      summary: Consulta um usuário pelo ID
+      description: Disponível somente para administradores.
+      responses:
+        "200":
+          description: Usuário encontrado
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-                    description: Token JWT para autenticação.
-                example:
-                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        401:
-          description: Dados inválidos
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Users]
+      summary: Atualiza todos os dados de um usuário
+      description: Disponível somente para administradores.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutUserRequest"
+      responses:
+        "200":
+          description: Usuário atualizado
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Users]
+      summary: Atualiza parcialmente um usuário
+      description: Disponível somente para administradores.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Usuário atualizado
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Users]
+      summary: Exclui um usuário
+      description: Disponível somente para administradores.
+      responses:
+        "204":
+          description: Usuário excluído
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: Lista todos os cursos
+      responses:
+        "200":
+          description: Lista de cursos
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Dados inválidos"
-        500:
-          description: Erro interno do servidor
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+    post:
+      tags: [Courses]
+      summary: Cria um curso
+      description: Disponível somente para administradores.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseRequest"
+      responses:
+        "201":
+          description: Curso criado
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /courses/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Courses]
+      summary: Consulta um curso pelo ID
+      responses:
+        "200":
+          description: Curso encontrado
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Erro interno do servidor"
+                $ref: "#/components/schemas/Course"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Courses]
+      summary: Atualiza um curso
+      description: Disponível somente para administradores.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCourseRequest"
+      responses:
+        "200":
+          description: Curso atualizado
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Courses]
+      summary: Exclui um curso
+      description: Cursos com alunos matriculados não podem ser excluídos.
+      responses:
+        "204":
+          description: Curso excluído
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /users/me/courses:
+    get:
+      tags: [Enrollments]
+      summary: Lista os próprios cursos
+      responses:
+        "200":
+          description: Cursos do usuário autenticado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnrolledCourse"
+
+  /users/{userId}/courses:
+    get:
+      tags: [Enrollments]
+      summary: Lista os cursos de um usuário
+      description: Disponível somente para administradores.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Cursos do usuário
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnrolledCourse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{userId}/courses/{courseId}:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+      - $ref: "#/components/parameters/CourseId"
+    post:
+      tags: [Enrollments]
+      summary: Matricula um aluno em um curso
+      description: Disponível somente para administradores.
+      responses:
+        "201":
+          description: Matrícula criada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Enrollments]
+      summary: Remove uma matrícula
+      description: Disponível somente para administradores.
+      responses:
+        "204":
+          description: Matrícula removida
+        "404":
+          $ref: "#/components/responses/NotFound"
 
 components:
-  schemas:
-    UserResponse:
-      type: object
-      required:
-        - nome
-        - email
-        - senha
-      properties:
-        id:
-          type: string
-          description: O ID gerado do usuário.
-        nome:
-          type: string
-          description: O nome do usuário.
-        email:
-          type: string
-          description: O email único do usuário.
-        password:
-          type: string
-          description: A senha do usuário.
-      example:
-        id: "123"
-        nome: João da Silva
-        email: joao.silva@email.com
-        password: senha123
-    UserRequest:
-      type: object
-      required:
-        - nome
-        - email
-        - password
-      properties:
-        nome:
-          type: string
-          description: O nome do usuário.
-        email:
-          type: string
-          description: O email único do usuário.
-        password:
-          type: string
-          description: A senha do usuário.
-      example:
-        nome: João da Silva
-        email: joao.silva@email.com
-        password: senha123
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+    CourseId:
+      name: courseId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@email.com
+        password:
+          type: string
+          example: senha123
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, student]
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        role:
+          type: string
+          enum: [admin, student]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateUserRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Maria Silva
+        email:
+          type: string
+          format: email
+          example: maria@email.com
+        password:
+          type: string
+          minLength: 8
+          example: senha123
+        phone:
+          type: string
+          example: "11999999999"
+        birth_date:
+          type: string
+          format: date
+          example: "2000-05-20"
+        role:
+          type: string
+          enum: [admin, student]
+          default: student
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        phone:
+          type: string
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+    PutUserRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CourseRequest:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+          example: Desenvolvimento Web
+        code:
+          type: string
+          example: DEV-WEB
+        description:
+          type: string
+          example: Fundamentos de desenvolvimento web
+    UpdateCourseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+    Enrollment:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        course_id:
+          type: integer
+    EnrolledCourse:
+      allOf:
+        - $ref: "#/components/schemas/Course"
+        - type: object
+          properties:
+            enrolled_at:
+              type: string
+              format: date-time
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Dados inválidos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Acesso não permitido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Registro não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Conflito com um registro existente
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
