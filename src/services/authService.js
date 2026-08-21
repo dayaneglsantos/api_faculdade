@@ -19,7 +19,8 @@ const authenticateUser = async (email, password) => {
     return null;
   }
 
-  const token = jwt.sign({ userId: user.id }, secretKey, {
+  // Inclui o perfil no token para validar as permissões
+  const token = jwt.sign({ userId: user.id, role: user.role }, secretKey, {
     expiresIn: "7d", // token expira em 7 dias
   });
 

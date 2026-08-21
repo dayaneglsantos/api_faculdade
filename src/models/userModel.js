@@ -2,8 +2,15 @@ import { db } from "../config/db.js";
 
 const User = {
   async create(user) {
-    const query = `INSERT INTO users (name, email,password) VALUES (?, ?, ?)`;
-    const values = [user.name, user.email, user.password];
+    const query = `INSERT INTO users (name, email, password, phone, birth_date, role) VALUES (?, ?, ?, ?, ?, ?)`;
+    const values = [
+      user.name,
+      user.email,
+      user.password,
+      user.phone || null,
+      user.birth_date || null,
+      user.role,
+    ];
     const [result] = await db.query(query, values);
     return { id: result.insertId, ...user };
   },
@@ -21,10 +28,24 @@ const User = {
     return usersWithoutPassword[0];
   },
 
+  // Buscar um usuário pelo ID, incluindo a senhapR
+  async getByIdWithPassword(id) {
+    const query = `SELECT * FROM users WHERE id = ?`;
+    const [result] = await db.query(query, [id]);
+    return result[0];
+  },
+
   async getByEmail(email) {
     const query = `SELECT * FROM users WHERE email = ?`;
     const [result] = await db.query(query, [email]);
     return result[0];
+  },
+
+  // Faz a contagem de usuários com a role 'admin'
+  async countAdmins() {
+    const query = `SELECT COUNT(*) AS total FROM users WHERE role = 'admin'`;
+    const [result] = await db.query(query);
+    return result[0].total;
   },
 
   async update(id, name, email, password) {

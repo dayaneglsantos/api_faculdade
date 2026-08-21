@@ -19,3 +19,14 @@ export const authenticateToken = (req, res, next) => {
       .json({ error: "Forbidden: Invalid or expired token" });
   }
 };
+
+export const authorizeAdmin = (req, res, next) => {
+  // Permite o acesso somente para administradores
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ error: "Acesso permitido apenas para administradores" });
+  }
+
+  next();
+};

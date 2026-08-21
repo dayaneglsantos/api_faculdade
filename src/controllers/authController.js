@@ -18,6 +18,7 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       };
 
       return res.status(200).send({ token, ...usersWithoutPassword });
