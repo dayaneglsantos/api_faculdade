@@ -13,6 +13,23 @@ export const createUser = async (req, res) => {
     role = "student",
   } = req.body;
 
+  // Valida os campos obrigatórios
+  if (!name?.trim() || !email || !password) {
+    return res
+      .status(400)
+      .json({ message: "Nome, e-mail e senha são obrigatórios" });
+  }
+
+  if (!validateEmail(email)) {
+    return res.status(400).json({ message: "Formato de e-mail inválido" });
+  }
+
+  if (password.length < 8) {
+    return res
+      .status(400)
+      .json({ message: "Senha deve ter pelo menos 8 caracteres" });
+  }
+
   // Aceita somente os perfis disponíveis no sistema
   if (!["admin", "student"].includes(role)) {
     return res.status(400).json({ message: "Perfil de usuário inválido" });
@@ -26,17 +43,13 @@ export const createUser = async (req, res) => {
       .json({ message: "Já existe um usuário com este e-mail" });
   }
 
-  if (!validateEmail(email)) {
-    return res.status(400).send({ message: "Formato de e-mail inválido" });
-  }
-
   const hashedPassword = await hashPassword(password);
   if (!hashedPassword) {
     return res.status(500).send({ message: "Erro ao criar hash da senha" });
   }
 
   await User.create({
-    name,
+    name: name.trim(),
     email,
     password: hashedPassword,
     phone,
@@ -158,6 +171,11 @@ export const partialUpdateUser = async (req, res) => {
       return res.status(500).send({ message: "Erro ao criar hash da senha" });
     }
     updatedFields.password = hashedPassword;
+  }
+
+  // Impede uma atualização sem campos válidos
+  if (Object.keys(updatedFields).length === 0) {
+    return res.status(400).json({ message: "Nenhum campo válido foi enviado" });
   }
 
   await User.partialUpdate(id, updatedFields);

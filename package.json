@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "create-admin": "node scripts/createAdmin.js",
-    "test": "vitest --watch",
-    "coverage": "vitest run --watch --coverage"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",

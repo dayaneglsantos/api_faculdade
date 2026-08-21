@@ -1,72 +1,192 @@
-# Api Faculdade
+# API Faculdade
 
-Api desenvolvida para a disciplina de Contrução Backend do curso de Análise e Desenvolvimento de Sistemas
+API desenvolvida para a disciplina de Construção Backend do curso de Análise e Desenvolvimento de Sistemas.
 
-## 📂 Estrutura de pastas
+O projeto permite gerenciar usuários, cursos e matrículas. A autenticação é feita com JWT e as senhas são protegidas com bcrypt.
 
-- **Config** - Possui arquivos de configurações
-- **Controllers** - Possui os controladores com funções usadas nas rotas
-- **Middlewares** - Possui arquivos com middlewares
-- **Models** - Arquivos com as querys (comunicação com banco de dados)
-- **Routes** - Arquivos com as rotas da API
-- **Tests** - Possui arquivos de testes da aplicação
+## Funcionalidades
 
-### 🔧 Instalação
+- Login com e-mail e senha
+- Perfis de administrador e estudante
+- Cadastro e gerenciamento de usuários
+- Consulta, edição e exclusão da própria conta
+- Cadastro e gerenciamento de cursos
+- Matrícula de estudantes em mais de um curso
+- Bloqueio da exclusão de cursos com alunos matriculados
+- Documentação com Swagger
+- Testes automatizados
 
-Passo a passo para execução do projeto:
+## Perfis de usuário
 
-Instalação das dependências
+### Administrador
 
+O administrador pode:
+
+- Cadastrar e consultar usuários
+- Atualizar e excluir usuários
+- Criar, atualizar e excluir cursos
+- Matricular e remover estudantes dos cursos
+
+### Estudante
+
+O estudante pode:
+
+- Consultar e atualizar a própria conta
+- Excluir a própria conta confirmando a senha
+- Consultar os cursos em que está matriculado
+- Consultar os cursos disponíveis
+
+## Tecnologias
+
+- Node.js
+- Express
+- MySQL
+- JWT
+- bcrypt
+- Swagger
+- Vitest
+- Supertest
+
+## Estrutura de pastas
+
+```text
+database/migrations  Scripts de criação das tabelas
+scripts              Scripts auxiliares
+src/config           Configurações da aplicação
+src/controllers      Regras das requisições
+src/middlewares      Autenticação, autorização e erros
+src/models           Consultas ao banco de dados
+src/routes           Rotas da API
+src/services         Serviços de autenticação e senha
+tests                Testes automatizados
 ```
+
+## Configuração do projeto
+
+### 1. Instale as dependências
+
+```powershell
 npm install
 ```
 
-Rodando o projeto
+### 2. Configure as variáveis de ambiente
 
+Copie o arquivo `.env.example` para `.env` e informe os dados do seu ambiente.
+
+```env
+PORT=3000
+DB_HOST=localhost
+DB_USER=seu_usuario
+DB_PASS=sua_senha
+DB_NAME=api-faculdade
+FRONTEND_DEV_URL=http://localhost:5173
+FRONTEND_PROD_URL=url_do_frontend
+JWT_SECRET=sua_chave_secreta
 ```
+
+### 3. Crie o banco de dados
+
+Crie um banco com o mesmo nome informado em `DB_NAME`.
+
+```sql
+CREATE DATABASE `api-faculdade`;
+```
+
+Depois, execute os arquivos abaixo na ordem:
+
+```text
+database/migrations/001_create_users.sql
+database/migrations/002_create_courses.sql
+database/migrations/003_create_user_courses.sql
+```
+
+### 4. Crie o primeiro administrador
+
+```powershell
+npm run create-admin
+```
+
+Esse script funciona somente quando ainda não existe um administrador. Os próximos usuários devem ser cadastrados pelo fluxo normal da API.
+
+### 5. Inicie a aplicação
+
+```powershell
 npm run dev
 ```
 
-Rodando testes
+## Documentação
 
-```
-npm run test
+Com a aplicação em execução, acesse:
+
+```text
+http://localhost:3000/api-docs
 ```
 
-Rodando testes com cobertura
+Faça login, copie o token retornado e use o botão **Authorize** do Swagger para testar as rotas protegidas.
 
+## Principais rotas
+
+### Autenticação
+
+```text
+POST /login
 ```
+
+### Usuários
+
+```text
+GET    /users
+POST   /users
+GET    /users/me
+PATCH  /users/me
+DELETE /users/me
+GET    /users/:id
+PUT    /users/:id
+PATCH  /users/:id
+DELETE /users/:id
+```
+
+### Cursos
+
+```text
+GET    /courses
+POST   /courses
+GET    /courses/:id
+PATCH  /courses/:id
+DELETE /courses/:id
+```
+
+### Matrículas
+
+```text
+GET    /users/me/courses
+GET    /users/:userId/courses
+POST   /users/:userId/courses/:courseId
+DELETE /users/:userId/courses/:courseId
+```
+
+## Testes
+
+Executar todos os testes uma vez:
+
+```powershell
+npm test
+```
+
+Executar os testes enquanto os arquivos são alterados:
+
+```powershell
+npm run test:watch
+```
+
+Gerar o relatório de cobertura:
+
+```powershell
 npm run coverage
 ```
 
-## 🛠️ Tecnologias
+Os testes usam mocks e não alteram os dados do banco configurado.
 
-Ferramentas utilizadas no projeto:
+## Autora
 
-- [Express](https://expressjs.com/) - Framework NodeJs para contrução de API
-- [Vitest](https://vitest.dev/guide/) - Framework de testes
-- [Swagger](https://swagger.io/docs/open-source-tools/swagger-ui/usage/installation/) - Documentação da API
-- [bcrypt](https://www.npmjs.com/package/bcrypt) - Usada para criptografar (hash) as senhas
-- [cors](https://www.npmjs.com/package/cors) - Middleware para proteção da API (acesso de dominios diferentes)
-- [dotenv](https://www.npmjs.com/package/dotenv) - Patote para gerenciamento das variáveis de ambiente
-- [Json Web Token](https://www.npmjs.com/package/jsonwebtoken) - Para autenticação
-- [Mysql2](https://www.npmjs.com/package/mysql2) - Client Mysql para NodeJs
-- [yamljs](https://www.npmjs.com/package/yamljs) - Para leitura de arquivos YML
-- [Nodemon](https://www.npmjs.com/package/nodemon) - Usado para otimizar o desenvolvimento
-- [Supertest](https://www.npmjs.com/package/supertest) - Usado para simular requisições HTTP (nos testes)
-
-## Informações
-
-- Todas as rotas são privadas com excessão da rota de autenticação
-- Acesso a documentação rodando projeto localmente: _localhost:port/api-docs/_
-
-##### Recomendações para teste da api:
-
-- Configurar DB
-- Rodar projeto
-- Criar usuário pelo Postman
-- Testar documentação pelo Swagger (com o usuário criado autenticado)
-
-### 🚀 Desenvolvido por:
-
-👩🏻‍💻 Dayane Gabrielly L. dos Santos
+Desenvolvido por Dayane Gabrielly L. dos Santos.

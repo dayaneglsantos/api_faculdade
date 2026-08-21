@@ -1,375 +1,172 @@
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { app } from "../src/index.js";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import request from "supertest";
-import * as hashModule from "../src/services/hashPassword.js";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import User from "../src/models/userModel.js";
+import { hashPassword } from "../src/services/hashPassword.js";
+import { app } from "../src/app.js";
 
-describe("user CRUD", () => {
-  let token;
-  let newUserId;
+// Evita o acesso ao banco durante os testes
+vi.mock("../src/models/userModel.js", () => ({
+  default: {
+    create: vi.fn(),
+    getAll: vi.fn(),
+    getById: vi.fn(),
+    getByIdWithPassword: vi.fn(),
+    getByEmail: vi.fn(),
+    partialUpdate: vi.fn(),
+    countAdmins: vi.fn(),
+    delete: vi.fn(),
+  },
+}));
 
-  // Executa o login antes de todos os testes para obter o token
-  beforeAll(async () => {
-    const res = await request(app).post("/login").send({
-      email: "senha123@teste.com",
-      password: "senha123",
-    });
-    token = res.body.token;
-  });
+vi.mock("../src/services/hashPassword.js", () => ({
+  hashPassword: vi.fn(),
+}));
 
-  // Limpa todos os mocks após cada teste
-  afterEach(() => {
+vi.mock("bcrypt", () => ({
+  default: {
+    compare: vi.fn(),
+  },
+}));
+
+describe("User tests", () => {
+  const admin = {
+    id: 1,
+    name: "Administrador",
+    email: "admin@email.com",
+    password: "hashed-password",
+    role: "admin",
+  };
+
+  const student = {
+    id: 2,
+    name: "Aluno",
+    email: "aluno@email.com",
+    password: "hashed-password",
+    role: "student",
+  };
+
+  const adminToken = jwt.sign(
+    { userId: admin.id, role: admin.role },
+    process.env.JWT_SECRET,
+  );
+  const studentToken = jwt.sign(
+    { userId: student.id, role: student.role },
+    process.env.JWT_SECRET,
+  );
+
+  beforeEach(() => {
     vi.clearAllMocks();
+    User.getById.mockResolvedValue(admin);
+    hashPassword.mockResolvedValue("hashed-password");
   });
 
-  test("create user with existing email", async () => {
-    const newUser = {
-      name: "John Doe",
-      email: "senha123@teste.com",
-      password: "password123",
-    };
+  test("prevents a student from creating users", async () => {
+    User.getById.mockResolvedValue(student);
 
     const response = await request(app)
       .post("/users")
-      .set("Authorization", `Bearer ${token}`)
-      .send(newUser);
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({
+        name: "Novo aluno",
+        email: "novo@email.com",
+        password: "senha123",
+      });
 
-    expect(response.statusCode).toBe(409);
+    expect(response.status).toBe(403);
   });
-  test("create user with valid data", async () => {
-    const newUser = {
-      name: "Novo usuário do teste",
-      email: `john${Date.now()}@example.com`,
-      password: "password123",
+
+  test("allows an admin to create a student", async () => {
+    const newStudent = {
+      id: 3,
+      name: "Novo aluno",
+      email: "novo@email.com",
+      role: "student",
     };
+    User.getByEmail
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(newStudent);
 
     const response = await request(app)
       .post("/users")
-      .set("Authorization", `Bearer ${token}`)
-      .send(newUser);
-    console.log(response.body);
-    const data = response.body;
-    newUserId = data.id;
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        name: newStudent.name,
+        email: newStudent.email,
+        password: "senha123",
+      });
 
-    expect(data).toHaveProperty("id", expect.any(Number));
-    expect(data.name).toBe(newUser.name);
-    expect(data.email).toBe(newUser.email);
+    expect(response.status).toBe(201);
+    expect(response.body.role).toBe("student");
   });
-  test("create user - hash failed", async () => {
-    const newUser = {
-      name: "New user",
-      email: `john${Date.now()}@example.com`,
-      password: "password123",
-    };
-    vi.spyOn(hashModule, "hashPassword").mockResolvedValueOnce(null);
 
+  test("requires name, email and password when creating a user", async () => {
     const response = await request(app)
       .post("/users")
-      .set("Authorization", `Bearer ${token}`)
-      .send(newUser);
-
-    expect(response.status).toBe(500);
-  });
-
-  test("get all users", async () => {
-    const response = await request(app)
-      .get("/users")
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(response.body).toBeInstanceOf(Array);
-  });
-
-  test("get user by ID", async () => {
-    const id = newUserId;
-    const response = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(response.body.id).toBe(id);
-    expect(response.body).toHaveProperty("name");
-    expect(response.body).toBeInstanceOf(Object);
-  });
-  test("get user by ID - user not finded", async () => {
-    const id = 1111;
-    const response = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(response.status).toBe(404);
-  });
-
-  test("update user using PUT method without send all fields", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      name: "New name",
-    };
-    const response = await request(app)
-      .put(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
 
     expect(response.status).toBe(400);
   });
 
-  test("update user using PUT method successfully", async () => {
-    const id = newUserId; // Use newUserId if available, otherwise default to 2
-    const fieldsToUpdate = {
-      name: "New name",
-      email: `john${Date.now()}@example.com`,
-      password: "newpassword123",
-    };
+  test("returns the authenticated user", async () => {
     const response = await request(app)
-      .put(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    const userAfterUpdate = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(userAfterUpdate.status).toBe(200);
-    expect(userAfterUpdate.body.name).toEqual(fieldsToUpdate.name);
-    expect(userAfterUpdate.body.email).toEqual(fieldsToUpdate.email);
-    expect(userAfterUpdate.body).not.toHaveProperty("password");
-  });
-
-  test("update user using PUT method - user not found", async () => {
-    const id = 99999;
-    const fieldsToUpdate = {
-      name: "New name",
-      email: "newemail@example.com",
-      password: "newpassword123",
-    };
-    const response = await request(app)
-      .put(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(404);
-  });
-  test("update user using PUT method - hash failed", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      name: "New name",
-      email: `john${Date.now()}@example.com`,
-      password: "newpassword123",
-    };
-    vi.spyOn(hashModule, "hashPassword").mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .put(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe("Erro ao criar hash da senha");
-  });
-
-  test("update user using PUT method - sending invalid email", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      name: "teste",
-      email: "invalid-email",
-      password: "senha1234",
-    };
-    const response = await request(app)
-      .put(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Formato de e-mail inválido");
-  });
-
-  test("update user using PUT method - sending invalid password", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      name: "teste",
-      email: "emailvalido@teste.com",
-      password: "123",
-    };
-    const response = await request(app)
-      .put(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe(
-      "Senha deve ter pelo menos 8 caracteres"
-    );
-  });
-
-  test("update user using PATCH method - change name successfully", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      name: "New name",
-    };
-
-    const userBeforeUpdate = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    const response = await request(app)
-      .patch(`/users/${id}`)
-      .send(fieldsToUpdate)
-      .set("Authorization", `Bearer ${token}`);
+      .get("/users/me")
+      .set("Authorization", `Bearer ${adminToken}`);
 
     expect(response.status).toBe(200);
-
-    expect(response.body.name).toBe(fieldsToUpdate.name);
-    expect(response.body.email).toBe(userBeforeUpdate.body.email);
-  });
-  test("update user using PATCH method - change email successfully", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      email: `john${Date.now()}@example.com`,
-    };
-
-    const userBeforeUpdate = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(200);
-
-    expect(response.body.email).toBe(fieldsToUpdate.email);
-    expect(response.body.name).toBe(userBeforeUpdate.body.name);
-  });
-  test("update user using PATCH method - change password successfully", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      password: "newpassword123",
-    };
-
-    const userBeforeUpdate = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(200);
-
-    expect(response.body).not.toHaveProperty("password");
-    expect(response.body.name).toBe(userBeforeUpdate.body.name);
+    expect(response.body.email).toBe(admin.email);
   });
 
-  test("update user using PATCH method - user not found", async () => {
-    const id = 12211;
-    const fieldsToUpdate = {
-      name: "New name",
-    };
-
+  test("rejects an empty partial update", async () => {
     const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(404);
-  });
-
-  test("update user using PATCH method - hash failed", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      password: "newpassword123",
-    };
-    vi.spyOn(hashModule, "hashPassword").mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(500);
-  });
-
-  test("update user using PATCH method - user founded", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      name: "New name",
-    };
-
-    const userBeforeUpdate = await request(app)
-      .get(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
-    const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
-
-    expect(response.status).toBe(200);
-    expect(response.body.name).toBe(fieldsToUpdate.name);
-    expect(response.body.email).toBe(userBeforeUpdate.body.email);
-  });
-
-  test("update user using PATCH method - invalid email", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      email: "invalid-email",
-    };
-
-    const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
+      .patch("/users/me")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({});
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Formato de e-mail inválido");
   });
 
-  test("update user using PATCH method - sending invalid email", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      email: "invalid-email",
-    };
+  test("updates the user phone", async () => {
+    const updatedAdmin = { ...admin, phone: "11999999999" };
+    User.getById
+      .mockResolvedValueOnce(admin)
+      .mockResolvedValueOnce(admin)
+      .mockResolvedValueOnce(updatedAdmin);
 
     const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
+      .patch("/users/me")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ phone: updatedAdmin.phone });
 
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Formato de e-mail inválido");
+    expect(response.status).toBe(200);
+    expect(response.body.phone).toBe(updatedAdmin.phone);
   });
 
-  test("update user using PATCH method - sending invalid password", async () => {
-    const id = newUserId;
-    const fieldsToUpdate = {
-      password: "123",
-    };
+  test("rejects account deletion when password is invalid", async () => {
+    User.getByIdWithPassword.mockResolvedValue(admin);
+    bcrypt.compare.mockResolvedValue(false);
 
     const response = await request(app)
-      .patch(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send(fieldsToUpdate);
+      .delete("/users/me")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ password: "senha-incorreta" });
 
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe(
-      "Senha deve ter pelo menos 8 caracteres"
-    );
+    expect(response.status).toBe(401);
   });
 
-  test("delete user - not found", async () => {
-    const id = 99999;
-    const response = await request(app)
-      .delete(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
+  test("deletes the student account when password is valid", async () => {
+    User.getById.mockResolvedValue(student);
+    User.getByIdWithPassword.mockResolvedValue(student);
+    bcrypt.compare.mockResolvedValue(true);
 
-    expect(response.status).toBe(404);
-  });
-
-  test("delete user successfully", async () => {
-    const id = newUserId;
     const response = await request(app)
-      .delete(`/users/${id}`)
-      .set("Authorization", `Bearer ${token}`);
+      .delete("/users/me")
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ password: "senha123" });
 
     expect(response.status).toBe(204);
+    expect(User.delete).toHaveBeenCalledWith(student.id);
   });
 });

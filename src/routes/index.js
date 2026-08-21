@@ -8,6 +8,7 @@ import { authenticateToken } from "../middlewares/authMiddleware.js";
 const router = Router();
 
 router.use(login);
+// Todas as rotas abaixo exigem autenticação
 router.use(authenticateToken);
 router.use(user);
 router.use(course);

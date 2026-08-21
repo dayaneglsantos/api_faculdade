@@ -1,23 +1,32 @@
 import jwt from "jsonwebtoken";
+import User from "../models/userModel.js";
 
-const SECRET_KEY = process.env.JWT_SECRET;
-
-export const authenticateToken = (req, res, next) => {
+export const authenticateToken = async (req, res, next) => {
   const token = req.header("Authorization")?.split(" ")[1]; // Pega o token sem o "Bearer"
 
   if (!token) {
     return res.status(401).json({ error: "Unauthorized: No token provided" });
   }
 
+  let decoded;
+
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded; // Adiciona os dados do usuário decodificados ao objeto req
-    next();
-  } catch (err) {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
     return res
       .status(403)
       .json({ error: "Forbidden: Invalid or expired token" });
   }
+
+  // Confirma se o usuário do token ainda existe
+  const user = await User.getById(decoded.userId);
+
+  if (!user) {
+    return res.status(401).json({ error: "Usuário não encontrado" });
+  }
+
+  req.user = { userId: user.id, role: user.role };
+  next();
 };
 
 export const authorizeAdmin = (req, res, next) => {
