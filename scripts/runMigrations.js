@@ -8,6 +8,19 @@ const migrations = [
 ];
 
 try {
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    try {
+      // Aguarda o banco estar pronto para receber conexões
+      await db.query("SELECT 1");
+      break;
+    } catch (error) {
+      if (attempt === 10) throw error;
+
+      console.log("Aguardando o banco iniciar...");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+
   for (const migration of migrations) {
     // Lê e executa cada arquivo na ordem definida
     const file = new URL(`../database/migrations/${migration}`, import.meta.url);
