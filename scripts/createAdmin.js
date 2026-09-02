@@ -4,8 +4,15 @@ import { db } from "../src/config/db.js";
 import { hashPassword } from "../src/services/hashPassword.js";
 import validateEmail from "../src/services/validateEmail.js";
 
-// Cria uma interface de leitura de dados do terminal
-const question = readline.createInterface({ input, output });
+const hasAdminVariables =
+  process.env.ADMIN_NAME &&
+  process.env.ADMIN_EMAIL &&
+  process.env.ADMIN_PASSWORD;
+
+// Usa o terminal apenas quando as variáveis não foram informadas
+const question = hasAdminVariables
+  ? null
+  : readline.createInterface({ input, output });
 
 try {
   // Verifica se o primeiro administrador já foi criado
@@ -18,9 +25,13 @@ try {
       "Já existe um administrador. Cadastre novos usuários pelo fluxo normal da API.",
     );
   } else {
-    const name = await question.question("Nome do administrador: ");
-    const email = await question.question("E-mail: ");
-    const password = await question.question("Senha: ");
+    const name =
+      process.env.ADMIN_NAME ||
+      (await question.question("Nome do administrador: "));
+    const email =
+      process.env.ADMIN_EMAIL || (await question.question("E-mail: "));
+    const password =
+      process.env.ADMIN_PASSWORD || (await question.question("Senha: "));
 
     // Valida os dados informados
     if (!name.trim() || !validateEmail(email) || password.length < 8) {
@@ -53,6 +64,6 @@ try {
   console.error("Erro ao criar administrador:", error.message);
   process.exitCode = 1;
 } finally {
-  question.close();
+  question?.close();
   await db.end();
 }
